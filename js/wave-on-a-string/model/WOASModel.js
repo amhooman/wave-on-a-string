@@ -7,6 +7,7 @@
  */
 define( function( require ) {
   'use strict';
+  const Util = require( 'DOT/Util' );
   var Emitter = require( 'AXON/Emitter' );
   var inherit = require( 'PHET_CORE/inherit' );
   var Property = require( 'AXON/Property' );
@@ -63,6 +64,48 @@ define( function( require ) {
 
     // set the string to 0 on mode changes
     this.modeProperty.lazyLink( this.manualRestart.bind( this ) );
+
+    // hacks for websocket!!
+    // NOTE: You will have to change this IP to the devices adress, and the devices MUST be on the same network
+    // Take a look at this example on how to set up a websocket with npm:
+    // https://www.sitepoint.com/real-time-apps-websockets-server-sent-events/
+    // 
+    // Then in the client webpage, add a listener to the page that monitors device orientation like
+    // var handleOrientation = function( event ) {
+    //   var absolute = event.absolute;
+    //   var alpha    = event.alpha;
+    //   var beta     = event.beta;
+    //   var gamma    = event.gamma;
+    //   
+    //   var json = JSON.stringify( {
+    //     message: 'orientation event',
+    //     beta: beta,
+    //     absolute: event.absolute,
+    //     alpha: event.alpha,
+    //     gamma: event.gamma
+    //   } );
+    //   socket.send(json);
+    // }
+    var socket = new WebSocket('ws://10.0.0.198:8081/');
+
+    var self = this;
+    socket.onmessage = function( event ) {
+      var inputs = JSON.parse( event.data );
+
+      console.log( inputs );      
+      if ( inputs.beta === undefined ) {
+        return;
+      }
+
+      var orientation = -inputs.beta * 2;
+
+      // further transformation will occur here
+      orientation = Util.clamp( orientation, -100, 100 );
+
+      self.nextLeftY = orientation;
+      self.play = true;
+      self.yNowChanged.emit();
+    };
   }
 
   inherit( Object, WOASModel, {
